@@ -1,0 +1,15 @@
+GET /streams
+    - gets all streams
+
+GET /streams?category=
+    - gets by category
+
+Rocket
+    - allow error states, Error
+    - allow json parsed structs
+        - deserializer using miniserde
+    - logging
+    - store developers user_id?
+    - concurrently request - done
+        - better to concurrently request after 900 entries of livestreams
+

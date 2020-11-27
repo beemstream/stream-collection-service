@@ -1,0 +1,16 @@
+[package]
+name = "stream-collection-service"
+version = "0.1.0"
+authors = ["Ibrahim M <dev@beemstream.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+rocket = { git = "https://github.com/SergioBenitez/Rocket.git", branch = "master", features = ["secrets"] }
+rocket_contrib = { git = "https://github.com/SergioBenitez/Rocket.git", branch = "master" }
+rocket_codegen = { git = "https://github.com/SergioBenitez/Rocket.git" , branch = "master" }
+isahc = { version = "0.9", features = ["psl"]}
+miniserde = "0.1.13"
+dotenv = "0.15.0"
+futures = "0.3"
