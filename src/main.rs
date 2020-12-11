@@ -1,19 +1,17 @@
 use dotenv::dotenv;
+use futures::future;
 use isahc::prelude::*;
 use miniserde::{json, Deserialize, Serialize};
-use std::collections::HashMap;
-use futures::future;
+use rocket::{
+    http::Status,
+    request::{FromFormValue, Request as R},
+};
+use std::{collections::HashMap, fmt::format};
+use utils::JsonResponse;
 
+mod utils;
 #[macro_use]
 extern crate rocket;
-
-#[derive(Eq, PartialEq, Hash)]
-enum Category {
-    Programming,
-    WebDevelopment,
-    GameDevelopment,
-    MobileDevelopment,
-}
 
 // static
 fn get_twitch_tag_ids() -> HashMap<Category, String> {
@@ -67,18 +65,26 @@ async fn get_twitch_token() -> Token {
     json::from_str::<Token>(&text_response).unwrap()
 }
 
-async fn get_twitch_streams_offset(offset: i16, twitch_client_id: String, access_token: String) -> TwitchStreamsResponse {
+async fn get_twitch_streams(
+    twitch_client_id: String,
+    access_token: String,
+) -> TwitchStreamsResponse {
     let request = Request::builder()
         .uri("https://api.twitch.tv/helix/streams?game_id=509670&first=100")
         .method("GET")
         .header("Client-ID", twitch_client_id)
         .header("Authorization", format!("Bearer {}", access_token))
-        .header("offset", offset)
         .body(())
         .unwrap();
     let mut response = isahc::send_async(request).await.unwrap();
     let text_response = response.text_async().await.unwrap();
-    json::from_str::<TwitchStreamsResponse>(&text_response).unwrap()
+    println!("EXTERNAL REQUEST TWITCH status {:?}", response.status());
+    let json_response = json::from_str::<TwitchStreamsResponse>(&text_response);
+
+    match json_response {
+        Ok(v) => v,
+        Err(e) => panic!("Error Parsing {:?}", e),
+    }
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -95,44 +101,58 @@ struct TwitchStream {
     viewer_count: u32,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 struct TwitchPagination {
     cursor: String,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 struct TwitchStreamsResponse {
     data: Vec<TwitchStream>,
     pagination: TwitchPagination,
 }
 
-#[get("/streams")]
-async fn get_streams<'a>() -> String {
+fn search_by_category(streams: Vec<TwitchStream>, category_tag: &String) -> Vec<TwitchStream> {
+    streams
+        .into_iter()
+        .filter(|stream| stream.tag_ids.iter().any(|id| id.eq(category_tag)))
+        .collect()
+}
+
+#[get("/streams?<category>")]
+async fn get_streams<'a>(category: Option<Category>) -> JsonResponse<Vec<TwitchStream>> {
     let token = get_twitch_token().await;
     let twitch_client_id: String =
         std::env::var("TWITCH_CLIENT_ID").expect("TWITCH_CLIENT_ID must be set");
+    let twitch_tags_map = get_twitch_tag_ids();
 
-    let mut requests = vec![];
-    for i in 0..11 {
-        requests.push(get_twitch_streams_offset(
-            i,
-            twitch_client_id.clone(),
-            token.access_token.clone(),
-        ));
-    }
-    let every_response = future::join_all(requests).await;
+    let all_streams = get_twitch_streams(twitch_client_id, token.access_token.clone());
 
-    let last = every_response.last().unwrap();
-    println!("has streams remaining {:?}", last.pagination.cursor);
-    let all_streams: Vec<TwitchStream> = every_response.into_iter()
-        .flat_map(|s| s.data)
-        .collect();
+    let streams = match category {
+        Some(c) => search_by_category(all_streams.await.data, twitch_tags_map.get(&c).unwrap()),
+        None => all_streams.await.data,
+    };
 
-    json::to_string(&all_streams)
+    JsonResponse::new(streams, Status::Ok)
+}
+
+#[derive(Debug, Eq, PartialEq, Hash, FromFormValue)]
+enum Category {
+    Programming,
+    WebDevelopment,
+    GameDevelopment,
+    MobileDevelopment,
+}
+
+#[catch(404)]
+fn not_found(_: &R) -> () {
+    ()
 }
 
 #[launch]
 fn rocket() -> rocket::Rocket {
     dotenv().ok();
-    rocket::ignite().mount("/", routes![get_streams])
+    rocket::ignite()
+        .mount("/", routes![get_streams])
+        .register(catchers![not_found])
 }

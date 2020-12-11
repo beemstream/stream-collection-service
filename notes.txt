@@ -1,15 +1,23 @@
 GET /streams
-    - gets all streams
+    - gets all streams done
 
 GET /streams?category=
-    - gets by category
+    - gets by category done
 
 Rocket
     - allow error states, Error
-    - allow json parsed structs
-        - deserializer using miniserde
+        - if query parameter is not valid - done
+        - propogate errors from external request
+    - allow json parsed structs done
+        - deserializer using miniserde done 
     - logging
     - store developers user_id?
-    - concurrently request - done
+    - concurrently request - cant be done anymore
         - better to concurrently request after 900 entries of livestreams
+    - add integation tests
+    - recursively request using cursor from response
+
+- lazy_static or once_cell
+    - env vars
+    - twitch tag ids
 
