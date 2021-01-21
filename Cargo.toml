@@ -10,7 +10,9 @@ edition = "2018"
 rocket = { git = "https://github.com/SergioBenitez/Rocket.git", branch = "master", features = ["secrets"] }
 rocket_contrib = { git = "https://github.com/SergioBenitez/Rocket.git", branch = "master" }
 rocket_codegen = { git = "https://github.com/SergioBenitez/Rocket.git" , branch = "master" }
-isahc = { version = "0.9", features = ["psl"]}
-miniserde = "0.1.13"
-dotenv = "0.15.0"
+isahc = { git = "https://github.com/sagebind/isahc.git", features = ["psl", "json"]}
 futures = "0.3"
+serde = "1"
+serde_json = "1"
+log = "0.4.0"
+env_logger = "0.8.2"

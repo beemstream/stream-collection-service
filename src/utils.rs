@@ -1,9 +1,7 @@
-use std::io::Cursor;
-
-use miniserde::{json, Serialize};
-use rocket::http::ContentType;
 use rocket::response::{self, Responder, Response};
 use rocket::{http::Status, request::Request};
+use rocket_contrib::json::Json;
+use serde::Serialize;
 
 pub struct JsonResponse<T> {
     data: T,
@@ -21,12 +19,10 @@ where
 
 #[rocket::async_trait]
 impl<'r, T: Serialize> Responder<'r, 'static> for JsonResponse<T> {
-    fn respond_to(self, _: &'r Request<'_>) -> response::Result<'static> {
-        let string_json = json::to_string(&self.data);
-        Response::build()
-            .header(ContentType::JSON)
+    fn respond_to(self, request: &'r Request<'_>) -> response::Result<'static> {
+
+        Response::build_from(Json(self.data).respond_to(request).unwrap())
             .status(self.status_code)
-            .sized_body(string_json.len(), Cursor::new(string_json))
             .ok()
     }
 }

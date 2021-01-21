@@ -1,17 +1,14 @@
-use dotenv::dotenv;
-use futures::future;
-use isahc::prelude::*;
-use miniserde::{json, Deserialize, Serialize};
-use rocket::{
-    http::Status,
-    request::{FromFormValue, Request as R},
-};
-use std::{collections::HashMap, fmt::format};
+use isahc::{ReadResponseExt, Request, AsyncReadResponseExt};
+use rocket::{Rocket, State, http::Status, request::{FromFormValue, Request as R}};
+use std::{collections::HashMap, sync::{Arc, Mutex}};
 use utils::JsonResponse;
+use serde::{Deserialize, Serialize};
 
 mod utils;
 #[macro_use]
 extern crate rocket;
+#[macro_use]
+extern crate log;
 
 // static
 fn get_twitch_tag_ids() -> HashMap<Category, String> {
@@ -44,61 +41,63 @@ struct User {
     completed: bool,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 struct Token {
     access_token: String,
     expires_in: u64,
     token_type: String,
 }
 
-async fn get_twitch_token() -> Token {
-    let twitch_client_id: String =
-        std::env::var("TWITCH_CLIENT_ID").expect("TWITCH_CLIENT_ID must be set");
-    let twitch_client_secret: String =
-        std::env::var("TWITCH_CLIENT_SECRET").expect("TWITCH_CLIENT_ID must be set");
+fn get_twitch_token(client_id: &String, client_secret: &String) -> Token {
     let url = format!(
         "https://id.twitch.tv/oauth2/token?client_id={}&client_secret={}&grant_type={}",
-        twitch_client_id, twitch_client_secret, "client_credentials"
+        client_id, client_secret, "client_credentials"
     );
-    let mut response = isahc::post_async(url, "").await.unwrap();
-    let text_response = response.text_async().await.unwrap();
-    json::from_str::<Token>(&text_response).unwrap()
+
+    let mut response = isahc::post(url, "").unwrap();
+    response.json().unwrap()
 }
 
 async fn get_twitch_streams(
-    twitch_client_id: String,
-    access_token: String,
+    twitch_client_id: &String,
+    access_token: &String,
+    after: &str,
 ) -> TwitchStreamsResponse {
+    let after_query = {
+        if !after.is_empty() {
+            format!("&after={}", after)
+        } else {
+            after.to_owned()
+        }
+    };
+
     let request = Request::builder()
-        .uri("https://api.twitch.tv/helix/streams?game_id=509670&first=100")
+        .uri(format!("https://api.twitch.tv/helix/streams?game_id=509670&first=100{}", after_query))
         .method("GET")
         .header("Client-ID", twitch_client_id)
         .header("Authorization", format!("Bearer {}", access_token))
         .body(())
         .unwrap();
-    let mut response = isahc::send_async(request).await.unwrap();
-    let text_response = response.text_async().await.unwrap();
-    println!("EXTERNAL REQUEST TWITCH status {:?}", response.status());
-    let json_response = json::from_str::<TwitchStreamsResponse>(&text_response);
 
-    match json_response {
-        Ok(v) => v,
-        Err(e) => panic!("Error Parsing {:?}", e),
-    }
+    let mut response = isahc::send_async(request).await.unwrap();
+
+    response.json().await.unwrap()
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize, Clone)]
 struct TwitchStream {
     game_id: String,
+    game_name: String,
     id: String,
     language: String,
     started_at: String,
-    tag_ids: Vec<String>,
+    tag_ids: Option<Vec<String>>,
     thumbnail_url: String,
     title: String,
     user_id: String,
     user_name: String,
-    viewer_count: u32,
+    viewer_count: u64,
+    r#type: String
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -112,25 +111,58 @@ struct TwitchStreamsResponse {
     pagination: TwitchPagination,
 }
 
-fn search_by_category(streams: Vec<TwitchStream>, category_tag: &String) -> Vec<TwitchStream> {
+fn search_by_category<'a>(streams: Vec<TwitchStream>, category_tag: &String) -> Vec<TwitchStream> {
     streams
         .into_iter()
-        .filter(|stream| stream.tag_ids.iter().any(|id| id.eq(category_tag)))
+        .filter(|stream| {
+            match &stream.tag_ids {
+                Some(tags) => tags.iter().any(|id| id.eq(category_tag)),
+                None => false
+            }
+        })
+        .collect()
+}
+
+
+fn filter_all_programming_streams<'a>(streams: Vec<TwitchStream>, tag_ids: &HashMap<Category, String>) -> Vec<TwitchStream> {
+    let tag_id_vals: Vec<&String> = tag_ids.values().collect();
+    streams
+        .into_iter()
+        .filter(|stream| {
+            match &stream.tag_ids {
+                Some(tags) => tags.iter().any(|id| tag_id_vals.contains(&id)),
+                None => false
+            }
+        })
         .collect()
 }
 
 #[get("/streams?<category>")]
-async fn get_streams<'a>(category: Option<Category>) -> JsonResponse<Vec<TwitchStream>> {
-    let token = get_twitch_token().await;
-    let twitch_client_id: String =
-        std::env::var("TWITCH_CLIENT_ID").expect("TWITCH_CLIENT_ID must be set");
-    let twitch_tags_map = get_twitch_tag_ids();
+async fn get_streams<'a>(
+    state: State<'a, GlobalConfig>,
+    category: Option<Category>,
+) -> JsonResponse<Vec<TwitchStream>> {
+    let token = state.fetch_access_token();
+    let mut all_streams = get_twitch_streams(&state.client_id, &token, "").await;
+    let mut cursor = all_streams.pagination.cursor;
 
-    let all_streams = get_twitch_streams(twitch_client_id, token.access_token.clone());
+    while !cursor.is_empty() {
+        info!("fetching cursor {:?}", cursor);
+        let mut stream_response = get_twitch_streams(&state.client_id, &token, cursor.as_str()).await;
+        all_streams.data.append(&mut stream_response.data);
+
+        if stream_response.data.len() == 0 {
+            cursor = "".to_string();
+        } else {
+            cursor = stream_response.pagination.cursor;
+        }
+    }
+
+    let data = all_streams.data;
 
     let streams = match category {
-        Some(c) => search_by_category(all_streams.await.data, twitch_tags_map.get(&c).unwrap()),
-        None => all_streams.await.data,
+        Some(c) => search_by_category(data, state.tags.get(&c).unwrap()),
+        None => filter_all_programming_streams(data, &state.tags),
     };
 
     JsonResponse::new(streams, Status::Ok)
@@ -149,10 +181,55 @@ fn not_found(_: &R) -> () {
     ()
 }
 
+struct GlobalConfig {
+    client_id: String,
+    client_secret: String,
+    tags: HashMap<Category, String>,
+    token: Arc<Mutex<Token>>,
+    expired: Arc<Mutex<std::time::Instant>>
+}
+
+impl GlobalConfig {
+    pub fn fetch_access_token(&self) -> String {
+        let is_expired = std::time::Instant::now() >= self.expired.lock().unwrap().clone();
+
+        if is_expired {
+            info!("token expired at: {:?}", std::time::Instant::now());
+            let token_response = get_twitch_token(&self.client_id, &self.client_secret);
+            *self.expired.lock().unwrap() = std::time::Instant::now() + std::time::Duration::from_secs(token_response.expires_in);
+            *self.token.lock().unwrap() = token_response;
+        }
+        self.token.lock().unwrap().access_token.clone()
+    }
+}
+
 #[launch]
-fn rocket() -> rocket::Rocket {
-    dotenv().ok();
-    rocket::ignite()
+async fn rocket() -> rocket::Rocket {
+    env_logger::init();
+    let rocket = Rocket::ignite();
+    let figment = rocket.figment();
+
+    let client_id: String = figment.extract_inner("twitch_client_id").expect("custom");
+    let client_secret: String = figment.extract_inner("twitch_client_secret").expect("custom");
+
+    let tags = get_twitch_tag_ids();
+    let token = Arc::new(Mutex::new(get_twitch_token(&client_id, &client_secret)));
+    let expires_in = token.lock().unwrap().expires_in.clone();
+    let expired = std::time::Duration::from_secs(expires_in);
+    let expiring_time = std::time::Instant::now() + expired;
+
+    info!("token expiring at {:?}", expires_in);
+
+    let config = GlobalConfig {
+        client_id,
+        client_secret,
+        tags,
+        token,
+        expired: Arc::new(Mutex::new(expiring_time))
+    };
+
+    rocket
         .mount("/", routes![get_streams])
+        .manage(config)
         .register(catchers![not_found])
 }
