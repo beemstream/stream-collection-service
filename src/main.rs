@@ -32,6 +32,28 @@ fn get_twitch_tag_ids() -> HashMap<Category, String> {
     hash
 }
 
+// static
+fn get_twitch_categories() -> HashMap<String, Category> {
+    let mut hash: HashMap<String, Category> = HashMap::new();
+    hash.insert(
+        "a59f1e4e-257b-4bd0-90c7-189c3efbf917".to_owned(),
+        Category::Programming,
+    );
+    hash.insert(
+        "c23ce252-cf78-4b98-8c11-8769801aaf3a".to_owned(),
+        Category::WebDevelopment,
+    );
+    hash.insert(
+        "f588bd74-e496-4d11-9169-3597f38a5d25".to_owned(),
+        Category::GameDevelopment,
+    );
+    hash.insert(
+        "6e23d976-33ec-47e8-b22b-3727acd41862".to_owned(),
+        Category::MobileDevelopment,
+    );
+    hash
+}
+
 #[derive(Debug, Deserialize)]
 #[allow(non_snake_case)]
 struct User {
@@ -102,7 +124,7 @@ struct TwitchStream {
 
 #[derive(Debug, Deserialize, Serialize)]
 struct TwitchPagination {
-    cursor: String,
+    cursor: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -111,7 +133,7 @@ struct TwitchStreamsResponse {
     pagination: TwitchPagination,
 }
 
-fn search_by_category<'a>(streams: Vec<TwitchStream>, category_tag: &String) -> Vec<TwitchStream> {
+fn filter_by_category(streams: Vec<TwitchStream>, category_tag: &String, categories: &HashMap<String, Category>) -> Vec<TwitchStream> {
     streams
         .into_iter()
         .filter(|stream| {
@@ -120,11 +142,11 @@ fn search_by_category<'a>(streams: Vec<TwitchStream>, category_tag: &String) -> 
                 None => false
             }
         })
-        .collect()
+    .collect()
 }
 
 
-fn filter_all_programming_streams<'a>(streams: Vec<TwitchStream>, tag_ids: &HashMap<Category, String>) -> Vec<TwitchStream> {
+fn filter_all_programming_streams<'a>(streams: Vec<TwitchStream>, tag_ids: &HashMap<Category, String>, categories: &HashMap<String, Category>) -> Vec<TwitchStream> {
     let tag_id_vals: Vec<&String> = tag_ids.values().collect();
     streams
         .into_iter()
@@ -143,32 +165,33 @@ async fn get_streams<'a>(
     category: Option<Category>,
 ) -> JsonResponse<Vec<TwitchStream>> {
     let token = state.fetch_access_token();
+    let categories = &state.categories;
     let mut all_streams = get_twitch_streams(&state.client_id, &token, "").await;
     let mut cursor = all_streams.pagination.cursor;
 
-    while !cursor.is_empty() {
+    while cursor.is_some() {
         info!("fetching cursor {:?}", cursor);
-        let mut stream_response = get_twitch_streams(&state.client_id, &token, cursor.as_str()).await;
+
+        let mut stream_response = get_twitch_streams(&state.client_id, &token, cursor.unwrap().as_str()).await;
+
+        info!("got {} streams", stream_response.data.len());
+
         all_streams.data.append(&mut stream_response.data);
 
-        if stream_response.data.len() == 0 {
-            cursor = "".to_string();
-        } else {
-            cursor = stream_response.pagination.cursor;
-        }
+        cursor = stream_response.pagination.cursor;
     }
 
     let data = all_streams.data;
 
     let streams = match category {
-        Some(c) => search_by_category(data, state.tags.get(&c).unwrap()),
-        None => filter_all_programming_streams(data, &state.tags),
+        Some(c) => filter_by_category(data, state.tags.get(&c).unwrap(), categories),
+        None => filter_all_programming_streams(data, &state.tags, categories),
     };
 
     JsonResponse::new(streams, Status::Ok)
 }
 
-#[derive(Debug, Eq, PartialEq, Hash, FromFormValue)]
+#[derive(Debug, Eq, PartialEq, Hash, FromFormValue, Serialize)]
 enum Category {
     Programming,
     WebDevelopment,
@@ -185,6 +208,7 @@ struct GlobalConfig {
     client_id: String,
     client_secret: String,
     tags: HashMap<Category, String>,
+    categories: HashMap<String, Category>,
     token: Arc<Mutex<Token>>,
     expired: Arc<Mutex<std::time::Instant>>
 }
@@ -213,7 +237,12 @@ async fn rocket() -> rocket::Rocket {
     let client_secret: String = figment.extract_inner("twitch_client_secret").expect("custom");
 
     let tags = get_twitch_tag_ids();
-    let token = Arc::new(Mutex::new(get_twitch_token(&client_id, &client_secret)));
+    let categories = get_twitch_categories();
+    let fetched_token = get_twitch_token(&client_id, &client_secret);
+
+    debug!("token fetched at {:?}", fetched_token.access_token);
+
+    let token = Arc::new(Mutex::new(fetched_token));
     let expires_in = token.lock().unwrap().expires_in.clone();
     let expired = std::time::Duration::from_secs(expires_in);
     let expiring_time = std::time::Instant::now() + expired;
@@ -223,6 +252,7 @@ async fn rocket() -> rocket::Rocket {
     let config = GlobalConfig {
         client_id,
         client_secret,
+        categories,
         tags,
         token,
         expired: Arc::new(Mutex::new(expiring_time))
