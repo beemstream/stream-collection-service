@@ -1,7 +1,11 @@
+use std::collections::HashMap;
+
 use rocket::response::{self, Responder, Response};
 use rocket::{http::Status, request::Request};
 use rocket_contrib::json::Json;
 use serde::Serialize;
+
+use crate::{category::Category, twitch_stream::TwitchStream};
 
 pub struct JsonResponse<T> {
     data: T,
@@ -26,3 +30,30 @@ impl<'r, T: Serialize> Responder<'r, 'static> for JsonResponse<T> {
             .ok()
     }
 }
+
+pub fn filter_by_category(streams: Vec<TwitchStream>, category_tag: &String) -> Vec<TwitchStream> {
+    streams
+        .into_iter()
+        .filter(|stream| {
+            match &stream.tag_ids {
+                Some(tags) => tags.iter().any(|id| id.eq(category_tag)),
+                None => false
+            }
+        })
+    .collect()
+}
+
+
+pub fn filter_all_programming_streams<'a>(streams: Vec<TwitchStream>, tag_ids: &HashMap<Category, String>) -> Vec<TwitchStream> {
+    let tag_id_vals: Vec<&String> = tag_ids.values().collect();
+    streams
+        .into_iter()
+        .filter(|stream| {
+            match &stream.tag_ids {
+                Some(tags) => tags.iter().any(|id| tag_id_vals.contains(&id)),
+                None => false
+            }
+        })
+        .collect()
+}
+
