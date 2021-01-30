@@ -1448,6 +1448,7 @@ dependencies = [
  "futures",
  "isahc",
  "log",
+ "openssl-probe",
  "rocket",
  "rocket_codegen",
  "rocket_contrib",

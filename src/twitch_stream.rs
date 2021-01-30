@@ -33,12 +33,9 @@ pub async fn get_twitch_streams(
     access_token: &String,
     after: &str,
 ) -> TwitchStreamsResponse {
-    let after_query = {
-        if !after.is_empty() {
-            format!("&after={}", after)
-        } else {
-            after.to_owned()
-        }
+    let after_query = match after.is_empty() {
+        true => after.to_owned(),
+        false => format!("&after={}", after)
     };
 
     let request = Request::builder()

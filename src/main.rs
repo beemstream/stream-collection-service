@@ -1,8 +1,10 @@
+use rocket::{Rocket, State, http::Status};
+use tags::get_twitch_tag_names;
+use std::sync::{Arc, Mutex};
+
 use catchers::not_found;
 use category::{Category, get_twitch_categories, get_twitch_tag_ids};
-use rocket::{Rocket, State, http::Status};
 use states::GlobalConfig;
-use std::sync::{Arc, Mutex};
 use utils::{JsonResponse, filter_all_programming_streams, filter_by_category};
 use twitch_stream::{TwitchStream, get_twitch_streams};
 use twitch_token::get_twitch_token;
@@ -13,6 +15,7 @@ mod twitch_token;
 mod category;
 mod states;
 mod catchers;
+mod tags;
 
 #[macro_use]
 extern crate rocket;
@@ -43,7 +46,7 @@ async fn get_streams<'a>(
     let data = all_streams.data;
 
     let streams = match category {
-        Some(c) => filter_by_category(data, state.tags.get(&c).unwrap()),
+        Some(c) => filter_by_category(data, state.tags.get(&c).unwrap(), &state.tags),
         None => filter_all_programming_streams(data, &state.tags),
     };
 
@@ -51,7 +54,8 @@ async fn get_streams<'a>(
 }
 
 #[launch]
-async fn rocket() -> rocket::Rocket {
+async fn start() -> rocket::Rocket {
+    openssl_probe::init_ssl_cert_env_vars();
     env_logger::init();
     let rocket = Rocket::ignite();
     let figment = rocket.figment();

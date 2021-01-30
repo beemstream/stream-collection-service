@@ -5,7 +5,7 @@ use rocket::{http::Status, request::Request};
 use rocket_contrib::json::Json;
 use serde::Serialize;
 
-use crate::{category::Category, twitch_stream::TwitchStream};
+use crate::{category::Category, tags::get_twitch_tag_names, twitch_stream::TwitchStream};
 
 pub struct JsonResponse<T> {
     data: T,
@@ -31,7 +31,7 @@ impl<'r, T: Serialize> Responder<'r, 'static> for JsonResponse<T> {
     }
 }
 
-pub fn filter_by_category(streams: Vec<TwitchStream>, category_tag: &String) -> Vec<TwitchStream> {
+pub fn filter_by_category(streams: Vec<TwitchStream>, category_tag: &String, categories: &HashMap<Category, String>) -> Vec<TwitchStream> {
     streams
         .into_iter()
         .filter(|stream| {
@@ -40,6 +40,10 @@ pub fn filter_by_category(streams: Vec<TwitchStream>, category_tag: &String) -> 
                 None => false
             }
         })
+    .map(|mut s| {
+        s.tag_ids = Some(get_twitch_tag_names(s.tag_ids.unwrap(), categories));
+        s
+    })
     .collect()
 }
 
@@ -54,6 +58,10 @@ pub fn filter_all_programming_streams<'a>(streams: Vec<TwitchStream>, tag_ids: &
                 None => false
             }
         })
-        .collect()
+    .map(|mut s| {
+        s.tag_ids = Some(get_twitch_tag_names(s.tag_ids.unwrap(), tag_ids));
+        s
+    })
+    .collect()
 }
 
