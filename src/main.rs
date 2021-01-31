@@ -55,7 +55,7 @@ async fn start() -> rocket::Rocket {
     };
 
     rocket
-        .mount("/", routes![get_streams, get_stream])
+        .mount("/stream-collection", routes![get_streams, get_stream])
         .manage(config)
         .register(catchers![not_found])
 }
