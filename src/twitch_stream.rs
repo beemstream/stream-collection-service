@@ -1,4 +1,5 @@
-use isahc::{Request, AsyncReadResponseExt};
+use isahc::{AsyncReadResponseExt, Request, http::StatusCode};
+use rocket::http::Status;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
@@ -49,4 +50,66 @@ pub async fn get_twitch_streams(
     let mut response = isahc::send_async(request).await.unwrap();
 
     response.json().await.unwrap()
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct TwitchUserResponse {
+    pub data: Vec<TwitchUser>
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct TwitchUser {
+    pub id: String,
+    pub login: String,
+    pub display_name: String,
+    pub r#type: String,
+    pub broadcaster_type: String,
+    pub description: String,
+    pub profile_image_url: String,
+    pub offline_image_url: String,
+    pub view_count: u32,
+}
+
+pub async fn get_twitch_user(
+    twitch_client_id: &String,
+    access_token: &String,
+    id: &String,
+) -> Result<TwitchUserResponse, Status> {
+
+    let request = Request::builder()
+        .uri(format!("https://api.twitch.tv/helix/users?id={}", id))
+        .method("GET")
+        .header("Client-ID", twitch_client_id)
+        .header("Authorization", format!("Bearer {}", access_token))
+        .body(())
+        .unwrap();
+
+    let mut response = isahc::send_async(request).await.unwrap();
+
+    if response.status() != StatusCode::OK {
+        return Err(Status::NotFound)
+    }
+    Ok(response.json().await.unwrap())
+}
+
+pub async fn get_twitch_stream(
+    twitch_client_id: &String,
+    access_token: &String,
+    id: &String,
+) -> Result<TwitchStreamsResponse, Status> {
+
+    let request = Request::builder()
+        .uri(format!("https://api.twitch.tv/helix/streams?user_id={}", id))
+        .method("GET")
+        .header("Client-ID", twitch_client_id)
+        .header("Authorization", format!("Bearer {}", access_token))
+        .body(())
+        .unwrap();
+
+    let mut response = isahc::send_async(request).await.unwrap();
+
+    if response.status() != StatusCode::OK {
+        return Err(Status::NotFound)
+    }
+    Ok(response.json().await.unwrap())
 }
