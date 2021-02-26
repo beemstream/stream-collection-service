@@ -11,12 +11,12 @@ pub struct StreamDetail {
     user_info: TwitchUser
 }
 
-#[get("/stream/<id>")]
-pub async fn get_stream<'a>(id: String, state: State<'a, GlobalConfig>) -> Result<JsonResponse<StreamDetail>, Status> {
+#[get("/stream/<username>")]
+pub async fn get_stream<'a>(username: String, state: State<'a, GlobalConfig>) -> Result<JsonResponse<StreamDetail>, Status> {
     let token = state.fetch_access_token();
 
-    let twitch_user = get_twitch_user(&state.client_id, &token, &id);
-    let twitch_stream = get_twitch_stream(&state.client_id, &token, &id);
+    let twitch_user = get_twitch_user(&state.client_id, &token, &username);
+    let twitch_stream = get_twitch_stream(&state.client_id, &token, &username);
 
     let (user, stream) = join(twitch_user, twitch_stream).await;
 

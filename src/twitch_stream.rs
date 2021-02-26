@@ -73,11 +73,11 @@ pub struct TwitchUser {
 pub async fn get_twitch_user(
     twitch_client_id: &String,
     access_token: &String,
-    id: &String,
+    username: &String,
 ) -> Result<TwitchUserResponse, Status> {
 
     let request = Request::builder()
-        .uri(format!("https://api.twitch.tv/helix/users?id={}", id))
+        .uri(format!("https://api.twitch.tv/helix/users?login={}", username))
         .method("GET")
         .header("Client-ID", twitch_client_id)
         .header("Authorization", format!("Bearer {}", access_token))
@@ -87,6 +87,7 @@ pub async fn get_twitch_user(
     let mut response = isahc::send_async(request).await.unwrap();
 
     if response.status() != StatusCode::OK {
+        info!("user not found failed with {:?}", response.status());
         return Err(Status::NotFound)
     }
     Ok(response.json().await.unwrap())
@@ -95,11 +96,11 @@ pub async fn get_twitch_user(
 pub async fn get_twitch_stream(
     twitch_client_id: &String,
     access_token: &String,
-    id: &String,
+    username: &String,
 ) -> Result<TwitchStreamsResponse, Status> {
 
     let request = Request::builder()
-        .uri(format!("https://api.twitch.tv/helix/streams?user_id={}", id))
+        .uri(format!("https://api.twitch.tv/helix/streams?user_login={}", username))
         .method("GET")
         .header("Client-ID", twitch_client_id)
         .header("Authorization", format!("Bearer {}", access_token))
@@ -109,6 +110,7 @@ pub async fn get_twitch_stream(
     let mut response = isahc::send_async(request).await.unwrap();
 
     if response.status() != StatusCode::OK {
+        info!("streams not found failed with {:?}", response.status());
         return Err(Status::NotFound)
     }
     Ok(response.json().await.unwrap())
