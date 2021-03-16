@@ -11,8 +11,13 @@ RUN cargo build --release
 
 # Now, we need to build our _real_ Docker container, copying in `using-diesel`.
 FROM alpine:latest
-RUN apk --no-cache add ca-certificates
+RUN apk --no-cache add ca-certificates \
+    bash
 COPY --from=builder \
     /home/rust/src/target/x86_64-unknown-linux-musl/release/stream-collection-service \
     /usr/local/bin/
-CMD /usr/local/bin/stream-collection-service
+
+COPY ./entrypoint.sh /usr/local/bin/
+ENTRYPOINT ["entrypoint.sh"]
+
+CMD ./usr/local/bin/stream-collection-service

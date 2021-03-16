@@ -1,6 +1,4 @@
 use std::collections::HashMap;
-
-use isahc::{AsyncReadResponseExt, ReadResponseExt, Request};
 use serde::Deserialize;
 
 use crate::category::Category;

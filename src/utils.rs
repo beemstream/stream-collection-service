@@ -31,7 +31,7 @@ impl<'r, T: Serialize> Responder<'r, 'static> for JsonResponse<T> {
     }
 }
 
-pub fn filter_by_category(streams: Vec<TwitchStream>, category_tag: &String, categories: &HashMap<Category, String>) -> Vec<TwitchStream> {
+pub fn filter_by_category(streams: Vec<TwitchStream>, category_tag: &str, categories: &HashMap<Category, String>) -> Vec<TwitchStream> {
     streams
         .into_iter()
         .filter(|stream| {

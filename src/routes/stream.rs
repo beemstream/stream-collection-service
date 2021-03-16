@@ -20,8 +20,13 @@ pub async fn get_stream<'a>(username: String, state: State<'a, GlobalConfig>) ->
 
     let (user, stream) = join(twitch_user, twitch_stream).await;
 
-    let user_info = user?.data.swap_remove(0);
-    let stream_info = stream?.data.swap_remove(0);
+    let mut user_data = user?.data;
+    info!("user_data got {:?}", user_data);
+    let user_info = user_data.swap_remove(0);
+
+    let mut stream_user_data = stream?.data;
+    info!("stream_user got {:?}", stream_user_data);
+    let stream_info = stream_user_data.swap_remove(0);
 
     let response = StreamDetail { stream_info, user_info };
 

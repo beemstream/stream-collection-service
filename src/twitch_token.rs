@@ -8,7 +8,7 @@ pub struct Token {
     pub token_type: String,
 }
 
-pub fn get_twitch_token(client_id: &String, client_secret: &String) -> Token {
+pub fn get_twitch_token(client_id: &str, client_secret: &str) -> Token {
     let url = format!(
         "https://id.twitch.tv/oauth2/token?client_id={}&client_secret={}&grant_type={}",
         client_id, client_secret, "client_credentials"

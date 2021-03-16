@@ -14,6 +14,7 @@ pub struct TwitchStream {
     pub title: String,
     pub user_id: String,
     pub user_name: String,
+    pub user_login: String,
     pub viewer_count: u64,
     pub r#type: String
 }
@@ -30,8 +31,8 @@ pub struct TwitchStreamsResponse {
 }
 
 pub async fn get_twitch_streams(
-    twitch_client_id: &String,
-    access_token: &String,
+    twitch_client_id: &str,
+    access_token: &str,
     after: &str,
 ) -> TwitchStreamsResponse {
     let after_query = match after.is_empty() {
@@ -71,9 +72,9 @@ pub struct TwitchUser {
 }
 
 pub async fn get_twitch_user(
-    twitch_client_id: &String,
-    access_token: &String,
-    username: &String,
+    twitch_client_id: &str,
+    access_token: &str,
+    username: &str,
 ) -> Result<TwitchUserResponse, Status> {
 
     let request = Request::builder()
@@ -94,9 +95,9 @@ pub async fn get_twitch_user(
 }
 
 pub async fn get_twitch_stream(
-    twitch_client_id: &String,
-    access_token: &String,
-    username: &String,
+    twitch_client_id: &str,
+    access_token: &str,
+    username: &str,
 ) -> Result<TwitchStreamsResponse, Status> {
 
     let request = Request::builder()
