@@ -7,8 +7,9 @@ use crate::{states::GlobalConfig, twitch_stream::{TwitchStream, TwitchUser, get_
 
 #[derive(Debug, Serialize)]
 pub struct StreamDetail {
-    stream_info: TwitchStream,
-    user_info: TwitchUser
+    #[serde(skip_serializing_if = "Option::is_none")]
+    stream_info: Option<TwitchStream>,
+    user_info: Option<TwitchUser>
 }
 
 #[get("/stream/<username>")]
@@ -22,11 +23,19 @@ pub async fn get_stream<'a>(username: String, state: State<'a, GlobalConfig>) ->
 
     let mut user_data = user?.data;
     info!("user_data got {:?}", user_data);
-    let user_info = user_data.swap_remove(0);
+
+    let user_info = match user_data.len() {
+        1 => Some(user_data.swap_remove(0)),
+        _ => return Err(Status::NotFound)
+    };
 
     let mut stream_user_data = stream?.data;
     info!("stream_user got {:?}", stream_user_data);
-    let stream_info = stream_user_data.swap_remove(0);
+
+    let stream_info = match stream_user_data.len() {
+        1 => Some(stream_user_data.swap_remove(0)),
+        _ => None
+    };
 
     let response = StreamDetail { stream_info, user_info };
 
