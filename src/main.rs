@@ -1,36 +1,32 @@
-use rocket::Rocket;
+use rocket::{catchers, debug, info, launch, routes, Rocket};
 use std::sync::{Arc, Mutex};
 
 use catchers::not_found;
 use category::{get_twitch_categories, get_twitch_tag_ids};
-use states::GlobalConfig;
-use twitch_token::get_twitch_token;
 use routes::stream::get_stream;
 use routes::streams::get_streams;
+use states::GlobalConfig;
+use twitch_token::get_twitch_token;
 
-mod utils;
+mod catchers;
+mod category;
+mod routes;
+mod states;
+mod tags;
 mod twitch_stream;
 mod twitch_token;
-mod category;
-mod states;
-mod catchers;
-mod tags;
-mod routes;
-
-#[macro_use]
-extern crate rocket;
-#[macro_use]
-extern crate log;
+mod utils;
 
 #[launch]
 async fn start() -> rocket::Rocket {
     openssl_probe::init_ssl_cert_env_vars();
-    env_logger::init();
     let rocket = Rocket::ignite();
     let figment = rocket.figment();
 
     let client_id: String = figment.extract_inner("twitch_client_id").expect("custom");
-    let client_secret: String = figment.extract_inner("twitch_client_secret").expect("custom");
+    let client_secret: String = figment
+        .extract_inner("twitch_client_secret")
+        .expect("custom");
 
     let tags = get_twitch_tag_ids();
     let categories = get_twitch_categories();
@@ -51,7 +47,7 @@ async fn start() -> rocket::Rocket {
         categories,
         tags,
         token,
-        expired: Arc::new(Mutex::new(expiring_time))
+        expired: Arc::new(Mutex::new(expiring_time)),
     };
 
     rocket

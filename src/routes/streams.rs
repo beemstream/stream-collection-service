@@ -1,7 +1,11 @@
-use rocket::{State, http::Status};
+use rocket::{get, http::Status, info, State};
 
-use crate::{category::Category, states::GlobalConfig, twitch_stream::{TwitchStream, get_twitch_streams}, utils::{JsonResponse, filter_all_programming_streams, filter_by_category}};
-
+use crate::{
+    category::Category,
+    states::GlobalConfig,
+    twitch_stream::{get_twitch_streams, TwitchStream},
+    utils::{filter_all_programming_streams, filter_by_category, JsonResponse},
+};
 
 #[get("/streams?<category>")]
 pub async fn get_streams<'a>(
@@ -15,9 +19,13 @@ pub async fn get_streams<'a>(
     while cursor.is_some() {
         info!("get_twitch_streams: fetching cursor {:?}", cursor);
 
-        let mut stream_response = get_twitch_streams(&state.client_id, &token, cursor.unwrap().as_str()).await;
+        let mut stream_response =
+            get_twitch_streams(&state.client_id, &token, cursor.unwrap().as_str()).await;
 
-        info!("get_twitch_streams: got {} streams", stream_response.data.len());
+        info!(
+            "get_twitch_streams: got {} streams",
+            stream_response.data.len()
+        );
 
         all_streams.data.append(&mut stream_response.data);
 
@@ -33,4 +41,3 @@ pub async fn get_streams<'a>(
 
     JsonResponse::new(streams, Status::Ok)
 }
-

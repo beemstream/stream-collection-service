@@ -1,3 +1,4 @@
+use rocket::FromFormValue;
 use serde::Serialize;
 use std::collections::HashMap;
 
@@ -52,4 +53,3 @@ pub fn get_twitch_categories() -> HashMap<String, Category> {
     );
     hash
 }
-

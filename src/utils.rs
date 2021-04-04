@@ -24,44 +24,44 @@ where
 #[rocket::async_trait]
 impl<'r, T: Serialize> Responder<'r, 'static> for JsonResponse<T> {
     fn respond_to(self, request: &'r Request<'_>) -> response::Result<'static> {
-
         Response::build_from(Json(self.data).respond_to(request).unwrap())
             .status(self.status_code)
             .ok()
     }
 }
 
-pub fn filter_by_category(streams: Vec<TwitchStream>, category_tag: &str, categories: &HashMap<Category, String>) -> Vec<TwitchStream> {
+pub fn filter_by_category(
+    streams: Vec<TwitchStream>,
+    category_tag: &str,
+    categories: &HashMap<Category, String>,
+) -> Vec<TwitchStream> {
     streams
         .into_iter()
-        .filter(|stream| {
-            match &stream.tag_ids {
-                Some(tags) => tags.iter().any(|id| id.eq(category_tag)),
-                None => false
-            }
+        .filter(|stream| match &stream.tag_ids {
+            Some(tags) => tags.iter().any(|id| id.eq(category_tag)),
+            None => false,
         })
-    .map(|mut s| {
-        s.tag_ids = Some(get_twitch_tag_names(s.tag_ids.unwrap(), categories));
-        s
-    })
-    .collect()
+        .map(|mut s| {
+            s.tag_ids = Some(get_twitch_tag_names(s.tag_ids.unwrap(), categories));
+            s
+        })
+        .collect()
 }
 
-
-pub fn filter_all_programming_streams<'a>(streams: Vec<TwitchStream>, tag_ids: &HashMap<Category, String>) -> Vec<TwitchStream> {
+pub fn filter_all_programming_streams<'a>(
+    streams: Vec<TwitchStream>,
+    tag_ids: &HashMap<Category, String>,
+) -> Vec<TwitchStream> {
     let tag_id_vals: Vec<&String> = tag_ids.values().collect();
     streams
         .into_iter()
-        .filter(|stream| {
-            match &stream.tag_ids {
-                Some(tags) => tags.iter().any(|id| tag_id_vals.contains(&id)),
-                None => false
-            }
+        .filter(|stream| match &stream.tag_ids {
+            Some(tags) => tags.iter().any(|id| tag_id_vals.contains(&id)),
+            None => false,
         })
-    .map(|mut s| {
-        s.tag_ids = Some(get_twitch_tag_names(s.tag_ids.unwrap(), tag_ids));
-        s
-    })
-    .collect()
+        .map(|mut s| {
+            s.tag_ids = Some(get_twitch_tag_names(s.tag_ids.unwrap(), tag_ids));
+            s
+        })
+        .collect()
 }
-

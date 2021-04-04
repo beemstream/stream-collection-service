@@ -1,19 +1,25 @@
-use rocket::{State, http::Status};
 use futures::future::join;
+use rocket::{get, http::Status, info, State};
 use serde::Serialize;
 
-use crate::{states::GlobalConfig, twitch_stream::{TwitchStream, TwitchUser, get_twitch_stream, get_twitch_user}, utils::JsonResponse};
-
+use crate::{
+    states::GlobalConfig,
+    twitch_stream::{get_twitch_stream, get_twitch_user, TwitchStream, TwitchUser},
+    utils::JsonResponse,
+};
 
 #[derive(Debug, Serialize)]
 pub struct StreamDetail {
     #[serde(skip_serializing_if = "Option::is_none")]
     stream_info: Option<TwitchStream>,
-    user_info: Option<TwitchUser>
+    user_info: Option<TwitchUser>,
 }
 
 #[get("/stream/<username>")]
-pub async fn get_stream<'a>(username: String, state: State<'a, GlobalConfig>) -> Result<JsonResponse<StreamDetail>, Status> {
+pub async fn get_stream<'a>(
+    username: String,
+    state: State<'a, GlobalConfig>,
+) -> Result<JsonResponse<StreamDetail>, Status> {
     let token = state.fetch_access_token();
 
     let twitch_user = get_twitch_user(&state.client_id, &token, &username);
@@ -26,7 +32,7 @@ pub async fn get_stream<'a>(username: String, state: State<'a, GlobalConfig>) ->
 
     let user_info = match user_data.len() {
         1 => Some(user_data.swap_remove(0)),
-        _ => return Err(Status::NotFound)
+        _ => return Err(Status::NotFound),
     };
 
     let mut stream_user_data = stream?.data;
@@ -34,11 +40,13 @@ pub async fn get_stream<'a>(username: String, state: State<'a, GlobalConfig>) ->
 
     let stream_info = match stream_user_data.len() {
         1 => Some(stream_user_data.swap_remove(0)),
-        _ => None
+        _ => None,
     };
 
-    let response = StreamDetail { stream_info, user_info };
+    let response = StreamDetail {
+        stream_info,
+        user_info,
+    };
 
     Ok(JsonResponse::new(response, Status::Ok))
 }
-

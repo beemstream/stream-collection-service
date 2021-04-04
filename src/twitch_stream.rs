@@ -1,5 +1,5 @@
-use isahc::{AsyncReadResponseExt, Request, http::StatusCode};
-use rocket::http::Status;
+use isahc::{http::StatusCode, AsyncReadResponseExt, Request};
+use rocket::{http::Status, info};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
@@ -16,7 +16,7 @@ pub struct TwitchStream {
     pub user_name: String,
     pub user_login: String,
     pub viewer_count: u64,
-    pub r#type: String
+    pub r#type: String,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -37,11 +37,14 @@ pub async fn get_twitch_streams(
 ) -> TwitchStreamsResponse {
     let after_query = match after.is_empty() {
         true => after.to_owned(),
-        false => format!("&after={}", after)
+        false => format!("&after={}", after),
     };
 
     let request = Request::builder()
-        .uri(format!("https://api.twitch.tv/helix/streams?game_id=509670&first=100{}", after_query))
+        .uri(format!(
+            "https://api.twitch.tv/helix/streams?game_id=509670&first=100{}",
+            after_query
+        ))
         .method("GET")
         .header("Client-ID", twitch_client_id)
         .header("Authorization", format!("Bearer {}", access_token))
@@ -55,7 +58,7 @@ pub async fn get_twitch_streams(
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct TwitchUserResponse {
-    pub data: Vec<TwitchUser>
+    pub data: Vec<TwitchUser>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -76,9 +79,11 @@ pub async fn get_twitch_user(
     access_token: &str,
     username: &str,
 ) -> Result<TwitchUserResponse, Status> {
-
     let request = Request::builder()
-        .uri(format!("https://api.twitch.tv/helix/users?login={}", username))
+        .uri(format!(
+            "https://api.twitch.tv/helix/users?login={}",
+            username
+        ))
         .method("GET")
         .header("Client-ID", twitch_client_id)
         .header("Authorization", format!("Bearer {}", access_token))
@@ -89,7 +94,7 @@ pub async fn get_twitch_user(
 
     if response.status() != StatusCode::OK {
         info!("user not found failed with {:?}", response.status());
-        return Err(Status::NotFound)
+        return Err(Status::NotFound);
     }
     Ok(response.json().await.unwrap())
 }
@@ -99,9 +104,11 @@ pub async fn get_twitch_stream(
     access_token: &str,
     username: &str,
 ) -> Result<TwitchStreamsResponse, Status> {
-
     let request = Request::builder()
-        .uri(format!("https://api.twitch.tv/helix/streams?user_login={}", username))
+        .uri(format!(
+            "https://api.twitch.tv/helix/streams?user_login={}",
+            username
+        ))
         .method("GET")
         .header("Client-ID", twitch_client_id)
         .header("Authorization", format!("Bearer {}", access_token))
@@ -112,7 +119,7 @@ pub async fn get_twitch_stream(
 
     if response.status() != StatusCode::OK {
         info!("streams not found failed with {:?}", response.status());
-        return Err(Status::NotFound)
+        return Err(Status::NotFound);
     }
     Ok(response.json().await.unwrap())
 }

@@ -17,5 +17,3 @@ pub fn get_twitch_token(client_id: &str, client_secret: &str) -> Token {
     let mut response = isahc::post(url, "").unwrap();
     response.json().unwrap()
 }
-
-
