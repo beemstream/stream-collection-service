@@ -25,10 +25,7 @@ pub fn get_twitch_tag_names(
 ) -> Vec<String> {
     tag_ids
         .into_iter()
-        .filter(|tag| {
-            let a: Vec<&String> = categories.values().into_iter().collect::<Vec<_>>();
-            a.contains(&tag)
-        })
+        .filter(|tag| categories.values().into_iter().any(|c| tag == c))
         .map(|mut tag| {
             for (cat, value) in categories {
                 if value == &tag {

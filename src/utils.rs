@@ -48,7 +48,7 @@ pub fn filter_by_category(
         .collect()
 }
 
-pub fn filter_all_programming_streams<'a>(
+pub fn filter_all_programming_streams(
     streams: Vec<TwitchStream>,
     tag_ids: &HashMap<Category, String>,
 ) -> Vec<TwitchStream> {

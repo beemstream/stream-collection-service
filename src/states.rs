@@ -19,7 +19,7 @@ pub struct GlobalConfig {
 
 impl GlobalConfig {
     pub fn fetch_access_token(&self) -> String {
-        let is_expired = std::time::Instant::now() >= self.expired.lock().unwrap().clone();
+        let is_expired = std::time::Instant::now() >= *self.expired.lock().unwrap();
 
         if is_expired {
             info!("token expired at: {:?}", std::time::Instant::now());

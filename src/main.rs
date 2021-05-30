@@ -3,8 +3,8 @@ use std::sync::{Arc, Mutex};
 
 use catchers::not_found;
 use category::{get_twitch_categories, get_twitch_tag_ids};
-use routes::stream::get_stream;
 use routes::streams::get_streams;
+use routes::{stream::get_stream, streams::fetch_streams_interval};
 use states::GlobalConfig;
 use twitch_token::get_twitch_token;
 
@@ -34,12 +34,23 @@ async fn start() -> rocket::Rocket {
 
     debug!("token fetched at {:?}", fetched_token.access_token);
 
-    let token = Arc::new(Mutex::new(fetched_token));
-    let expires_in = token.lock().unwrap().expires_in.clone();
+    let token = Arc::new(Mutex::new(fetched_token.clone()));
+    let expires_in = token.lock().unwrap().expires_in;
     let expired = std::time::Duration::from_secs(expires_in);
     let expiring_time = std::time::Instant::now() + expired;
 
     info!("token expiring at {:?}", expires_in);
+
+    let stream_fetch_interval =
+        rocket::tokio::time::interval(rocket::tokio::time::Duration::from_millis(15_000));
+
+    rocket::tokio::spawn(fetch_streams_interval(
+        stream_fetch_interval,
+        client_id.clone(),
+        client_secret.clone(),
+        fetched_token,
+        tags.clone(),
+    ));
 
     let config = GlobalConfig {
         client_id,

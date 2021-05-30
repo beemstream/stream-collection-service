@@ -16,9 +16,9 @@ pub struct StreamDetail {
 }
 
 #[get("/stream/<username>")]
-pub async fn get_stream<'a>(
+pub async fn get_stream(
     username: String,
-    state: State<'a, GlobalConfig>,
+    state: State<'_, GlobalConfig>,
 ) -> Result<JsonResponse<StreamDetail>, Status> {
     let token = state.fetch_access_token();
 
