@@ -1,8 +1,10 @@
 use std::collections::HashMap;
 
-use rocket::response::{self, Responder, Response};
 use rocket::{http::Status, request::Request};
-use rocket_contrib::json::Json;
+use rocket::{
+    response::{self, Responder, Response},
+    serde::json::Json,
+};
 use serde::Serialize;
 
 use crate::{category::Category, tags::get_twitch_tag_names, twitch_stream::TwitchStream};

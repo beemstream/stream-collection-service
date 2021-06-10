@@ -1,4 +1,4 @@
-use rocket::{catchers, debug, info, launch, routes, Rocket};
+use rocket::{catchers, debug, info, launch, routes, Build, Rocket};
 use std::sync::{Arc, Mutex};
 
 use catchers::not_found;
@@ -18,9 +18,9 @@ mod twitch_token;
 mod utils;
 
 #[launch]
-async fn start() -> rocket::Rocket {
+async fn start() -> rocket::Rocket<Build> {
     openssl_probe::init_ssl_cert_env_vars();
-    let rocket = Rocket::ignite();
+    let rocket = Rocket::build();
     let figment = rocket.figment();
 
     let client_id: String = figment.extract_inner("twitch_client_id").expect("custom");
@@ -64,5 +64,5 @@ async fn start() -> rocket::Rocket {
     rocket
         .mount("/stream-collection", routes![get_streams, get_stream])
         .manage(config)
-        .register(catchers![not_found])
+        .register("/", catchers![not_found])
 }
