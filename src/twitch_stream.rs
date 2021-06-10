@@ -49,11 +49,27 @@ pub async fn get_twitch_streams(
         .header("Client-ID", twitch_client_id)
         .header("Authorization", format!("Bearer {}", access_token))
         .body(())
+        .map_err(|_| TwitchStreamsResponse {
+            data: vec![],
+            pagination: TwitchPagination { cursor: None },
+        })
         .unwrap();
 
-    let mut response = isahc::send_async(request).await.unwrap();
+    let mut response = isahc::send_async(request)
+        .await
+        .map_err(|_| TwitchStreamsResponse {
+            data: vec![],
+            pagination: TwitchPagination { cursor: None },
+        })
+        .unwrap();
 
-    response.json().await.unwrap()
+    response
+        .json()
+        .await
+        .unwrap_or_else(|_| TwitchStreamsResponse {
+            data: vec![],
+            pagination: TwitchPagination { cursor: None },
+        })
 }
 
 #[derive(Debug, Deserialize, Serialize)]
