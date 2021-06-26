@@ -73,7 +73,7 @@ pub fn fetch_streams_interval(
 
 #[get("/streams?<category>")]
 pub async fn get_streams(
-    state: State<'_, GlobalConfig>,
+    state: &State<GlobalConfig>,
     category: Option<Category>,
 ) -> JsonResponse<Vec<TwitchStream>> {
     let data = ARRAY.lock().unwrap().clone();

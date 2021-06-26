@@ -1,8 +1,8 @@
-use rocket::FromFormValue;
+use rocket::FromFormField;
 use serde::Serialize;
 use std::collections::HashMap;
 
-#[derive(Debug, Eq, PartialEq, Hash, FromFormValue, Serialize, Clone)]
+#[derive(Debug, Eq, PartialEq, Hash, FromFormField, Serialize, Clone)]
 pub enum Category {
     Programming,
     WebDevelopment,
