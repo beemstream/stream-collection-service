@@ -10,7 +10,7 @@ use once_cell::sync::Lazy;
 use rocket::{get, http::Status, info, tokio::time::Interval, State};
 use std::{collections::HashMap, sync::Mutex};
 
-pub static ARRAY: Lazy<Mutex<Vec<TwitchStream>>> = Lazy::new(|| Mutex::new(vec![]));
+pub static STREAMS_CACHE: Lazy<Mutex<Vec<TwitchStream>>> = Lazy::new(|| Mutex::new(vec![]));
 
 pub fn fetch_access_token(token: Token, client_id: &str, client_secret: &str) -> Token {
     let expired = std::time::Duration::from_secs(token.expires_in);
@@ -64,7 +64,7 @@ pub fn fetch_streams_interval(
 
         let data = all_streams.data;
 
-        *ARRAY.lock().unwrap() = data;
+        *STREAMS_CACHE.lock().unwrap() = data;
 
         fetch_streams_interval(interval, client_id, client_secret, token, tags).await
     }
@@ -76,7 +76,7 @@ pub async fn get_streams(
     state: &State<GlobalConfig>,
     category: Option<Category>,
 ) -> JsonResponse<Vec<TwitchStream>> {
-    let data = ARRAY.lock().unwrap().clone();
+    let data = STREAMS_CACHE.lock().unwrap().clone();
 
     info!("got category {:?}", category);
 
