@@ -39,9 +39,12 @@ pub fn filter_by_category(
 ) -> Vec<TwitchStream> {
     streams
         .into_iter()
-        .filter(|stream| match &stream.tag_ids {
-            Some(tags) => tags.iter().any(|id| id.eq(category_tag)),
-            None => false,
+        .filter(|stream| {
+            let is_matched_tag = match &stream.tag_ids {
+                Some(tags) => tags.iter().any(|id| id.eq(category_tag)),
+                None => false,
+            };
+            stream.game_id == "1469308723" || is_matched_tag
         })
         .map(|mut s| {
             s.tag_ids = Some(get_twitch_tag_names(s.tag_ids.unwrap(), categories));
@@ -57,12 +60,21 @@ pub fn filter_all_programming_streams(
     let tag_id_vals: Vec<&String> = tag_ids.values().collect();
     streams
         .into_iter()
-        .filter(|stream| match &stream.tag_ids {
-            Some(tags) => tags.iter().any(|id| tag_id_vals.contains(&id)),
-            None => false,
+        .filter(|stream| {
+            let is_matched_tag = match &stream.tag_ids {
+                Some(tags) => tags.iter().any(|id| tag_id_vals.contains(&id)),
+                None => false,
+            };
+            stream.game_id == "1469308723" || is_matched_tag
         })
         .map(|mut s| {
-            s.tag_ids = Some(get_twitch_tag_names(s.tag_ids.unwrap(), tag_ids));
+            s.tag_ids = {
+                if s.tag_ids.is_none() {
+                    Some(vec!["programming".to_owned()])
+                } else {
+                    Some(get_twitch_tag_names(s.tag_ids.unwrap(), tag_ids))
+                }
+            };
             s
         })
         .collect()
