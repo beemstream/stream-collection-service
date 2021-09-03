@@ -44,10 +44,16 @@ pub fn filter_by_category(
                 Some(tags) => tags.iter().any(|id| id.eq(category_tag)),
                 None => false,
             };
-            stream.game_id == "1469308723" || is_matched_tag
+            is_matched_tag
         })
         .map(|mut s| {
-            s.tag_ids = Some(get_twitch_tag_names(s.tag_ids.unwrap(), categories));
+            s.tag_ids = {
+                if s.tag_ids.is_none() {
+                    Some(vec!["programming".to_owned()])
+                } else {
+                    Some(get_twitch_tag_names(s.tag_ids.unwrap(), categories))
+                }
+            };
             s
         })
         .collect()
