@@ -62,7 +62,32 @@ pub fn fetch_streams_interval(
             cursor = stream_response.pagination.cursor;
         }
 
-        let data = all_streams.data;
+        let mut all_streams_two =
+            twitch_stream::get_twitch_streams_two(&client_id, &access_token, "").await;
+        let mut cursor_two = all_streams_two.pagination.cursor;
+
+        while cursor_two.is_some() {
+            info!("get_twitch_streams_two: fetching cursor {:?}", cursor_two);
+
+            let mut stream_response_two = twitch_stream::get_twitch_streams_two(
+                &client_id,
+                &access_token,
+                cursor_two.unwrap().as_str(),
+            )
+            .await;
+
+            info!(
+                "get_twitch_streams: got {} streams",
+                stream_response_two.data.len()
+            );
+
+            all_streams_two.data.append(&mut stream_response_two.data);
+
+            cursor_two = stream_response_two.pagination.cursor;
+        }
+
+        let mut data = all_streams.data;
+        data.append(&mut all_streams_two.data);
 
         *STREAMS_CACHE.lock().unwrap() = data;
 
