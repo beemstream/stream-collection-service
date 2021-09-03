@@ -89,6 +89,8 @@ pub fn fetch_streams_interval(
         let mut data = all_streams.data;
         data.append(&mut all_streams_two.data);
 
+        data.sort_by(|a, b| b.viewer_count.cmp(&a.viewer_count));
+
         *STREAMS_CACHE.lock().unwrap() = data;
 
         fetch_streams_interval(interval, client_id, client_secret, token, tags).await
