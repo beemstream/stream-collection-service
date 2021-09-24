@@ -30,7 +30,7 @@ pub struct TwitchStreamsResponse {
     pub pagination: TwitchPagination,
 }
 
-pub async fn get_twitch_streams(
+pub async fn get_science_and_tech_streams(
     twitch_client_id: &str,
     access_token: &str,
     after: &str,
@@ -54,7 +54,7 @@ pub async fn get_twitch_streams(
     streams
 }
 
-pub async fn get_twitch_streams_two(
+pub async fn get_software_game_dev_streams(
     twitch_client_id: &str,
     access_token: &str,
     after: &str,
@@ -64,15 +64,18 @@ pub async fn get_twitch_streams_two(
         false => format!("&after={}", after),
     };
 
-    fetch_programming_streams(
-        twitch_client_id,
-        access_token,
-        format!(
-            "https://api.twitch.tv/helix/streams?game_id=1469308723&first=100{}",
-            after_query
-        ),
-    )
-    .await
+    let url = format!(
+        "https://api.twitch.tv/helix/streams?game_id=1469308723&first=100{}",
+        after_query
+    );
+
+    info!("requesting url {}", url);
+
+    let streams = fetch_programming_streams(twitch_client_id, access_token, url).await;
+
+    info!("fetched {} streams", streams.data.len());
+
+    streams
 }
 
 pub async fn fetch_programming_streams(

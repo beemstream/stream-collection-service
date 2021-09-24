@@ -31,10 +31,16 @@ pub fn fetch_access_token(token: Token, client_id: &str, client_secret: &str) ->
     }
 }
 
+pub enum TwitchCategory {
+    ScienceAndTechnology,
+    SoftwareAndGameDevelopment,
+}
+
 pub async fn fetch_all_livestreams(
     mut all_streams: TwitchStreamsResponse,
     client_id: &str,
     access_token: &str,
+    stream_source: TwitchCategory,
 ) -> TwitchStreamsResponse {
     let mut cursor = all_streams.pagination.cursor.clone();
 
@@ -45,9 +51,24 @@ pub async fn fetch_all_livestreams(
     while cursor.is_some() {
         info!("fetch_all_livestreams: fetching cursor {:?}", cursor);
 
-        let mut stream_response =
-            twitch_stream::get_twitch_streams(client_id, access_token, cursor.unwrap().as_str())
-                .await;
+        let mut stream_response = match stream_source {
+            TwitchCategory::ScienceAndTechnology => {
+                twitch_stream::get_science_and_tech_streams(
+                    client_id,
+                    access_token,
+                    cursor.unwrap().as_str(),
+                )
+                .await
+            }
+            TwitchCategory::SoftwareAndGameDevelopment => {
+                twitch_stream::get_software_game_dev_streams(
+                    client_id,
+                    access_token,
+                    cursor.unwrap().as_str(),
+                )
+                .await
+            }
+        };
 
         all_streams.data.append(&mut stream_response.data);
 
@@ -76,15 +97,17 @@ pub fn fetch_streams_interval(
             fetch_access_token(token.clone(), &client_id, &client_secret).access_token;
 
         let science_and_tech_stream_handle = fetch_all_livestreams(
-            twitch_stream::get_twitch_streams(&client_id, &access_token, "").await,
+            twitch_stream::get_science_and_tech_streams(&client_id, &access_token, "").await,
             &client_id,
             &access_token,
+            TwitchCategory::ScienceAndTechnology,
         );
 
         let software_and_game_dev_streams_handle = fetch_all_livestreams(
-            twitch_stream::get_twitch_streams_two(&client_id, &access_token, "").await,
+            twitch_stream::get_software_game_dev_streams(&client_id, &access_token, "").await,
             &client_id,
             &access_token,
+            TwitchCategory::SoftwareAndGameDevelopment,
         );
 
         let (science_and_tech_streams, mut software_and_game_dev_streams) = join!(
