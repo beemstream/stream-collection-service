@@ -8,11 +8,16 @@ use routes::{stream::get_stream, streams::fetch_streams_interval};
 use states::GlobalConfig;
 use twitch_token::get_twitch_token;
 
+use crate::catchers::unauthorized;
+use crate::routes::follows::get_follows_for_user;
+
 mod catchers;
 mod category;
+mod guards;
 mod routes;
 mod states;
 mod tags;
+mod twitch_follows;
 mod twitch_stream;
 mod twitch_token;
 mod utils;
@@ -62,7 +67,10 @@ async fn start() -> rocket::Rocket<Build> {
     };
 
     rocket
-        .mount("/stream-collection", routes![get_streams, get_stream])
+        .mount(
+            "/stream-collection",
+            routes![get_streams, get_stream, get_follows_for_user],
+        )
         .manage(config)
-        .register("/", catchers![not_found])
+        .register("/", catchers![not_found, unauthorized])
 }

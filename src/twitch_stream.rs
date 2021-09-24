@@ -40,11 +40,45 @@ pub async fn get_twitch_streams(
         false => format!("&after={}", after),
     };
 
-    let request = Request::builder()
-        .uri(format!(
+    fetch_science_and_tech_streams(
+        twitch_client_id,
+        access_token,
+        format!(
             "https://api.twitch.tv/helix/streams?game_id=509670&first=100{}",
             after_query
-        ))
+        ),
+    )
+    .await
+}
+
+pub async fn get_twitch_streams_two(
+    twitch_client_id: &str,
+    access_token: &str,
+    after: &str,
+) -> TwitchStreamsResponse {
+    let after_query = match after.is_empty() {
+        true => after.to_owned(),
+        false => format!("&after={}", after),
+    };
+
+    fetch_science_and_tech_streams(
+        twitch_client_id,
+        access_token,
+        format!(
+            "https://api.twitch.tv/helix/streams?game_id=1469308723&first=100{}",
+            after_query
+        ),
+    )
+    .await
+}
+
+pub async fn fetch_science_and_tech_streams(
+    twitch_client_id: &str,
+    access_token: &str,
+    url: String,
+) -> TwitchStreamsResponse {
+    let request = Request::builder()
+        .uri(url)
         .method("GET")
         .header("Client-ID", twitch_client_id)
         .header("Authorization", format!("Bearer {}", access_token))

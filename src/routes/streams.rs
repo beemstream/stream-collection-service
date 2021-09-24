@@ -10,7 +10,7 @@ use once_cell::sync::Lazy;
 use rocket::{get, http::Status, info, tokio::time::Interval, State};
 use std::{collections::HashMap, sync::Mutex};
 
-pub static ARRAY: Lazy<Mutex<Vec<TwitchStream>>> = Lazy::new(|| Mutex::new(vec![]));
+pub static STREAMS_CACHE: Lazy<Mutex<Vec<TwitchStream>>> = Lazy::new(|| Mutex::new(vec![]));
 
 pub fn fetch_access_token(token: Token, client_id: &str, client_secret: &str) -> Token {
     let expired = std::time::Duration::from_secs(token.expires_in);
@@ -62,9 +62,36 @@ pub fn fetch_streams_interval(
             cursor = stream_response.pagination.cursor;
         }
 
-        let data = all_streams.data;
+        let mut all_streams_two =
+            twitch_stream::get_twitch_streams_two(&client_id, &access_token, "").await;
+        let mut cursor_two = all_streams_two.pagination.cursor;
 
-        *ARRAY.lock().unwrap() = data;
+        while cursor_two.is_some() {
+            info!("get_twitch_streams_two: fetching cursor {:?}", cursor_two);
+
+            let mut stream_response_two = twitch_stream::get_twitch_streams_two(
+                &client_id,
+                &access_token,
+                cursor_two.unwrap().as_str(),
+            )
+            .await;
+
+            info!(
+                "get_twitch_streams: got {} streams",
+                stream_response_two.data.len()
+            );
+
+            all_streams_two.data.append(&mut stream_response_two.data);
+
+            cursor_two = stream_response_two.pagination.cursor;
+        }
+
+        let mut data = all_streams.data;
+        data.append(&mut all_streams_two.data);
+
+        data.sort_by(|a, b| b.viewer_count.cmp(&a.viewer_count));
+
+        *STREAMS_CACHE.lock().unwrap() = data;
 
         fetch_streams_interval(interval, client_id, client_secret, token, tags).await
     }
@@ -76,7 +103,7 @@ pub async fn get_streams(
     state: &State<GlobalConfig>,
     category: Option<Category>,
 ) -> JsonResponse<Vec<TwitchStream>> {
-    let data = ARRAY.lock().unwrap().clone();
+    let data = STREAMS_CACHE.lock().unwrap().clone();
 
     info!("got category {:?}", category);
 
