@@ -40,15 +40,18 @@ pub async fn get_twitch_streams(
         false => format!("&after={}", after),
     };
 
-    fetch_science_and_tech_streams(
-        twitch_client_id,
-        access_token,
-        format!(
-            "https://api.twitch.tv/helix/streams?game_id=509670&first=100{}",
-            after_query
-        ),
-    )
-    .await
+    let url = format!(
+        "https://api.twitch.tv/helix/streams?game_id=509670&first=100{}",
+        after_query
+    );
+
+    info!("requesting url {}", url);
+
+    let streams = fetch_programming_streams(twitch_client_id, access_token, url).await;
+
+    info!("fetched {} streams", streams.data.len());
+
+    streams
 }
 
 pub async fn get_twitch_streams_two(
@@ -61,7 +64,7 @@ pub async fn get_twitch_streams_two(
         false => format!("&after={}", after),
     };
 
-    fetch_science_and_tech_streams(
+    fetch_programming_streams(
         twitch_client_id,
         access_token,
         format!(
@@ -72,7 +75,7 @@ pub async fn get_twitch_streams_two(
     .await
 }
 
-pub async fn fetch_science_and_tech_streams(
+pub async fn fetch_programming_streams(
     twitch_client_id: &str,
     access_token: &str,
     url: String,
