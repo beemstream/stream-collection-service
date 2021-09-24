@@ -3,8 +3,11 @@ use rocket::{get, http::Status, info, State};
 use serde::Serialize;
 
 use crate::{
+    clients::twitch::{
+        user::{self, TwitchUser},
+        TwitchStream,
+    },
     states::GlobalConfig,
-    twitch_stream::{get_twitch_stream, get_twitch_user, TwitchStream, TwitchUser},
     utils::JsonResponse,
 };
 
@@ -22,8 +25,8 @@ pub async fn get_stream(
 ) -> Result<JsonResponse<StreamDetail>, Status> {
     let token = state.fetch_access_token();
 
-    let twitch_user = get_twitch_user(&state.client_id, &token, &username);
-    let twitch_stream = get_twitch_stream(&state.client_id, &token, &username);
+    let twitch_user = user::get_user(&state.client_id, &token, &username);
+    let twitch_stream = user::get_stream(&state.client_id, &token, &username);
 
     let (user, stream) = join(twitch_user, twitch_stream).await;
 

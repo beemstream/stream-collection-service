@@ -1,8 +1,10 @@
 use crate::{
     category::Category,
+    clients::twitch::{
+        get_science_and_tech_streams, get_software_game_dev_streams, get_token, Token,
+        TwitchStream, TwitchStreamsResponse,
+    },
     states::GlobalConfig,
-    twitch_stream::{self, TwitchStream, TwitchStreamsResponse},
-    twitch_token::{self, Token},
     utils::{filter_all_programming_streams, filter_by_category, JsonResponse},
 };
 use futures::{future::BoxFuture, FutureExt};
@@ -25,7 +27,7 @@ pub fn fetch_access_token(token: Token, client_id: &str, client_secret: &str) ->
 
     if is_expired {
         info!("token expired at: {:?}", std::time::Instant::now());
-        twitch_token::get_twitch_token(&client_id, &client_secret)
+        get_token(&client_id, &client_secret)
     } else {
         token
     }
@@ -53,20 +55,12 @@ pub async fn fetch_all_livestreams(
 
         let mut stream_response = match stream_source {
             TwitchCategory::ScienceAndTechnology => {
-                twitch_stream::get_science_and_tech_streams(
-                    client_id,
-                    access_token,
-                    cursor.unwrap().as_str(),
-                )
-                .await
+                get_science_and_tech_streams(client_id, access_token, cursor.unwrap().as_str())
+                    .await
             }
             TwitchCategory::SoftwareAndGameDevelopment => {
-                twitch_stream::get_software_game_dev_streams(
-                    client_id,
-                    access_token,
-                    cursor.unwrap().as_str(),
-                )
-                .await
+                get_software_game_dev_streams(client_id, access_token, cursor.unwrap().as_str())
+                    .await
             }
         };
 
@@ -97,14 +91,14 @@ pub fn fetch_streams_interval(
             fetch_access_token(token.clone(), &client_id, &client_secret).access_token;
 
         let science_and_tech_stream_handle = fetch_all_livestreams(
-            twitch_stream::get_science_and_tech_streams(&client_id, &access_token, "").await,
+            get_science_and_tech_streams(&client_id, &access_token, "").await,
             &client_id,
             &access_token,
             TwitchCategory::ScienceAndTechnology,
         );
 
         let software_and_game_dev_streams_handle = fetch_all_livestreams(
-            twitch_stream::get_software_game_dev_streams(&client_id, &access_token, "").await,
+            get_software_game_dev_streams(&client_id, &access_token, "").await,
             &client_id,
             &access_token,
             TwitchCategory::SoftwareAndGameDevelopment,

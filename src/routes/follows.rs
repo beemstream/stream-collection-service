@@ -1,8 +1,8 @@
 use crate::{
+    clients::twitch::user::{get_user_follows, TwitchUserFollow},
     guards::twitch_auth::AccessTokenResponse,
     routes::streams::STREAMS_CACHE,
     states::GlobalConfig,
-    twitch_follows::{self, get_twitch_user_follows, TwitchUserFollow},
 };
 use rocket::{get, info, serde::json::Json, State};
 
@@ -13,7 +13,7 @@ pub async fn get_follows_for_user(
 ) -> Json<Vec<TwitchUserFollow>> {
     let parsed_token = access_token.token.split(' ').collect::<Vec<&str>>();
 
-    let mut all_follows = get_twitch_user_follows(
+    let mut all_follows = get_user_follows(
         &state.client_id,
         &parsed_token[0],
         &access_token.validate_token.user_id,
@@ -25,7 +25,7 @@ pub async fn get_follows_for_user(
     while cursor.is_some() {
         info!("get_twitch_user_follows: fetching cursor {:?}", cursor);
 
-        let mut stream_response = twitch_follows::get_twitch_user_follows(
+        let mut stream_response = get_user_follows(
             &state.client_id,
             &parsed_token[0],
             &access_token.validate_token.user_id,

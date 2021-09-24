@@ -1584,7 +1584,6 @@ dependencies = [
  "futures",
  "isahc",
  "once_cell",
- "openssl-probe",
  "rocket",
  "serde",
 ]
