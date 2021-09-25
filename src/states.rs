@@ -15,6 +15,7 @@ pub struct GlobalConfig {
     pub categories: HashMap<String, Category>,
     pub token: Arc<Mutex<Token>>,
     pub expired: Arc<Mutex<std::time::Instant>>,
+    pub all_tags: HashMap<String, String>,
 }
 
 impl GlobalConfig {
