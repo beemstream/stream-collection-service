@@ -1,12 +1,4 @@
-use crate::{
-    category::Category,
-    clients::twitch::{
-        get_science_and_tech_streams, get_software_game_dev_streams, get_token, Token,
-        TwitchStream, TwitchStreamsResponse,
-    },
-    states::GlobalConfig,
-    utils::{filter_all_programming_streams, filter_by_category, JsonResponse},
-};
+use crate::{category::Category, clients::twitch::{Token, TwitchStream, TwitchStreamsResponse, get_science_and_tech_streams, get_software_game_dev_streams, get_token}, states::GlobalConfig, utils::{filter_all_programming_streams, filter_by_category, JsonResponse}};
 use futures::{future::BoxFuture, FutureExt};
 use once_cell::sync::Lazy;
 use rocket::{
@@ -27,7 +19,7 @@ pub fn fetch_access_token(token: Token, client_id: &str, client_secret: &str) ->
 
     if is_expired {
         info!("token expired at: {:?}", std::time::Instant::now());
-        get_token(&client_id, &client_secret)
+        get_token(client_id, client_secret)
     } else {
         token
     }
@@ -132,8 +124,8 @@ pub async fn get_streams(
     info!("got category {:?}", category);
 
     let streams = match category {
-        Some(c) => filter_by_category(data, state.tags.get(&c).unwrap(), &state.tags),
-        None => filter_all_programming_streams(data, &state.tags),
+        Some(c) => filter_by_category(data, state.tags.get(&c).unwrap(), &state.all_tags),
+        None => filter_all_programming_streams(data, &state.tags, &state.all_tags),
     };
 
     JsonResponse::new(streams, Status::Ok)

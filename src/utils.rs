@@ -8,7 +8,7 @@ use rocket::{
 use serde::Serialize;
 
 use crate::clients::twitch::TwitchStream;
-use crate::{category::Category, tags::get_twitch_tag_names};
+use crate::category::Category;
 
 pub struct JsonResponse<T> {
     data: T,
@@ -36,7 +36,7 @@ impl<'r, T: Serialize> Responder<'r, 'static> for JsonResponse<T> {
 pub fn filter_by_category(
     streams: Vec<TwitchStream>,
     category_tag: &str,
-    categories: &HashMap<Category, String>,
+    all_tags: &HashMap<String, String>
 ) -> Vec<TwitchStream> {
     streams
         .into_iter()
@@ -52,7 +52,7 @@ pub fn filter_by_category(
                 if s.tag_ids.is_none() {
                     Some(vec!["programming".to_owned()])
                 } else {
-                    Some(get_twitch_tag_names(s.tag_ids.unwrap(), categories))
+                    Some(s.tag_ids.unwrap().into_iter().map(|ids| all_tags.get(&ids).unwrap().to_owned()).collect())
                 }
             };
             s
@@ -63,6 +63,7 @@ pub fn filter_by_category(
 pub fn filter_all_programming_streams(
     streams: Vec<TwitchStream>,
     tag_ids: &HashMap<Category, String>,
+    all_tags: &HashMap<String, String>
 ) -> Vec<TwitchStream> {
     let tag_id_vals: Vec<&String> = tag_ids.values().collect();
     streams
@@ -79,7 +80,7 @@ pub fn filter_all_programming_streams(
                 if s.tag_ids.is_none() {
                     Some(vec!["programming".to_owned()])
                 } else {
-                    Some(get_twitch_tag_names(s.tag_ids.unwrap(), tag_ids))
+                    Some(s.tag_ids.unwrap().into_iter().map(|ids| all_tags.get(&ids).unwrap().to_owned()).collect())
                 }
             };
             s

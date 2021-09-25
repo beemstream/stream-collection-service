@@ -15,7 +15,7 @@ pub async fn get_follows_for_user(
 
     let mut all_follows = get_user_follows(
         &state.client_id,
-        &parsed_token[0],
+        parsed_token[0],
         &access_token.validate_token.user_id,
         "",
     )
@@ -27,7 +27,7 @@ pub async fn get_follows_for_user(
 
         let mut stream_response = get_user_follows(
             &state.client_id,
-            &parsed_token[0],
+            parsed_token[0],
             &access_token.validate_token.user_id,
             cursor.unwrap().as_str(),
         )
