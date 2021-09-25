@@ -1579,12 +1579,11 @@ checksum = "213701ba3370744dcd1a12960caa4843b3d68b4d1c0a5d575e0d65b2ee9d16c0"
 
 [[package]]
 name = "stream-collection-service"
-version = "0.1.7"
+version = "0.1.9"
 dependencies = [
  "futures",
  "isahc",
  "once_cell",
- "openssl-probe",
  "rocket",
  "serde",
 ]

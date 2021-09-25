@@ -6,25 +6,21 @@ use category::{get_twitch_categories, get_twitch_tag_ids};
 use routes::streams::get_streams;
 use routes::{stream::get_stream, streams::fetch_streams_interval};
 use states::GlobalConfig;
-use twitch_token::get_twitch_token;
 
 use crate::catchers::unauthorized;
 use crate::routes::follows::get_follows_for_user;
 
 mod catchers;
 mod category;
+mod clients;
 mod guards;
 mod routes;
 mod states;
 mod tags;
-mod twitch_follows;
-mod twitch_stream;
-mod twitch_token;
 mod utils;
 
 #[launch]
 async fn start() -> rocket::Rocket<Build> {
-    openssl_probe::init_ssl_cert_env_vars();
     let rocket = Rocket::build();
     let figment = rocket.figment();
 
@@ -35,7 +31,7 @@ async fn start() -> rocket::Rocket<Build> {
 
     let tags = get_twitch_tag_ids();
     let categories = get_twitch_categories();
-    let fetched_token = get_twitch_token(&client_id, &client_secret);
+    let fetched_token = clients::twitch::get_token(&client_id, &client_secret);
 
     debug!("token fetched at {:?}", fetched_token.access_token);
 

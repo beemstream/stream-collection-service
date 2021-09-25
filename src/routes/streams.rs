@@ -1,13 +1,21 @@
 use crate::{
     category::Category,
+    clients::twitch::{
+        get_science_and_tech_streams, get_software_game_dev_streams, get_token, Token,
+        TwitchStream, TwitchStreamsResponse,
+    },
     states::GlobalConfig,
-    twitch_stream::{self, TwitchStream},
-    twitch_token::{self, Token},
     utils::{filter_all_programming_streams, filter_by_category, JsonResponse},
 };
 use futures::{future::BoxFuture, FutureExt};
 use once_cell::sync::Lazy;
-use rocket::{get, http::Status, info, tokio::time::Interval, State};
+use rocket::{
+    get,
+    http::Status,
+    info,
+    tokio::{join, time::Interval},
+    State,
+};
 use std::{collections::HashMap, sync::Mutex};
 
 pub static STREAMS_CACHE: Lazy<Mutex<Vec<TwitchStream>>> = Lazy::new(|| Mutex::new(vec![]));
@@ -19,10 +27,54 @@ pub fn fetch_access_token(token: Token, client_id: &str, client_secret: &str) ->
 
     if is_expired {
         info!("token expired at: {:?}", std::time::Instant::now());
-        twitch_token::get_twitch_token(&client_id, &client_secret)
+        get_token(&client_id, &client_secret)
     } else {
         token
     }
+}
+
+pub enum TwitchCategory {
+    ScienceAndTechnology,
+    SoftwareAndGameDevelopment,
+}
+
+pub async fn fetch_all_livestreams(
+    mut all_streams: TwitchStreamsResponse,
+    client_id: &str,
+    access_token: &str,
+    stream_source: TwitchCategory,
+) -> TwitchStreamsResponse {
+    let mut cursor = all_streams.pagination.cursor.clone();
+
+    info!(
+        "fetch_all_livestreams: starting total {}",
+        all_streams.data.len()
+    );
+    while cursor.is_some() {
+        info!("fetch_all_livestreams: fetching cursor {:?}", cursor);
+
+        let mut stream_response = match stream_source {
+            TwitchCategory::ScienceAndTechnology => {
+                get_science_and_tech_streams(client_id, access_token, cursor.unwrap().as_str())
+                    .await
+            }
+            TwitchCategory::SoftwareAndGameDevelopment => {
+                get_software_game_dev_streams(client_id, access_token, cursor.unwrap().as_str())
+                    .await
+            }
+        };
+
+        all_streams.data.append(&mut stream_response.data);
+
+        info!(
+            "fetch_all_livestreams: got {} streams",
+            all_streams.data.len()
+        );
+
+        cursor = stream_response.pagination.cursor;
+    }
+
+    all_streams
 }
 
 pub fn fetch_streams_interval(
@@ -38,56 +90,28 @@ pub fn fetch_streams_interval(
         let access_token =
             fetch_access_token(token.clone(), &client_id, &client_secret).access_token;
 
-        let mut all_streams =
-            twitch_stream::get_twitch_streams(&client_id, &access_token, "").await;
-        let mut cursor = all_streams.pagination.cursor;
+        let science_and_tech_stream_handle = fetch_all_livestreams(
+            get_science_and_tech_streams(&client_id, &access_token, "").await,
+            &client_id,
+            &access_token,
+            TwitchCategory::ScienceAndTechnology,
+        );
 
-        while cursor.is_some() {
-            info!("get_twitch_streams: fetching cursor {:?}", cursor);
+        let software_and_game_dev_streams_handle = fetch_all_livestreams(
+            get_software_game_dev_streams(&client_id, &access_token, "").await,
+            &client_id,
+            &access_token,
+            TwitchCategory::SoftwareAndGameDevelopment,
+        );
 
-            let mut stream_response = twitch_stream::get_twitch_streams(
-                &client_id,
-                &access_token,
-                cursor.unwrap().as_str(),
-            )
-            .await;
+        let (science_and_tech_streams, mut software_and_game_dev_streams) = join!(
+            science_and_tech_stream_handle,
+            software_and_game_dev_streams_handle
+        );
 
-            info!(
-                "get_twitch_streams: got {} streams",
-                stream_response.data.len()
-            );
+        let mut data = science_and_tech_streams.data;
 
-            all_streams.data.append(&mut stream_response.data);
-
-            cursor = stream_response.pagination.cursor;
-        }
-
-        let mut all_streams_two =
-            twitch_stream::get_twitch_streams_two(&client_id, &access_token, "").await;
-        let mut cursor_two = all_streams_two.pagination.cursor;
-
-        while cursor_two.is_some() {
-            info!("get_twitch_streams_two: fetching cursor {:?}", cursor_two);
-
-            let mut stream_response_two = twitch_stream::get_twitch_streams_two(
-                &client_id,
-                &access_token,
-                cursor_two.unwrap().as_str(),
-            )
-            .await;
-
-            info!(
-                "get_twitch_streams: got {} streams",
-                stream_response_two.data.len()
-            );
-
-            all_streams_two.data.append(&mut stream_response_two.data);
-
-            cursor_two = stream_response_two.pagination.cursor;
-        }
-
-        let mut data = all_streams.data;
-        data.append(&mut all_streams_two.data);
+        data.append(&mut software_and_game_dev_streams.data);
 
         data.sort_by(|a, b| b.viewer_count.cmp(&a.viewer_count));
 

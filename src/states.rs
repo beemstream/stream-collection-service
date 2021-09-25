@@ -1,6 +1,6 @@
 use crate::{
     category::Category,
-    twitch_token::{get_twitch_token, Token},
+    clients::twitch::{get_token, Token},
 };
 use rocket::info;
 use std::{
@@ -23,7 +23,7 @@ impl GlobalConfig {
 
         if is_expired {
             info!("token expired at: {:?}", std::time::Instant::now());
-            let token_response = get_twitch_token(&self.client_id, &self.client_secret);
+            let token_response = get_token(&self.client_id, &self.client_secret);
             *self.expired.lock().unwrap() = std::time::Instant::now()
                 + std::time::Duration::from_secs(token_response.expires_in);
             *self.token.lock().unwrap() = token_response;

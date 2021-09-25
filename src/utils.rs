@@ -7,7 +7,8 @@ use rocket::{
 };
 use serde::Serialize;
 
-use crate::{category::Category, tags::get_twitch_tag_names, twitch_stream::TwitchStream};
+use crate::clients::twitch::TwitchStream;
+use crate::{category::Category, tags::get_twitch_tag_names};
 
 pub struct JsonResponse<T> {
     data: T,
