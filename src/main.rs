@@ -2,7 +2,7 @@ use rocket::{catchers, debug, info, launch, routes, Build, Rocket};
 use std::sync::{Arc, Mutex};
 
 use catchers::not_found;
-use category::{get_twitch_categories, get_twitch_tag_ids};
+use category::get_twitch_tag_ids;
 use routes::streams::get_streams;
 use routes::{stream::get_stream, streams::fetch_streams_interval};
 use states::GlobalConfig;
@@ -30,7 +30,6 @@ async fn start() -> rocket::Rocket<Build> {
         .expect("custom");
 
     let tags = get_twitch_tag_ids();
-    let categories = get_twitch_categories();
     let fetched_token = clients::twitch::get_token(&client_id, &client_secret);
 
     debug!("token fetched at {:?}", fetched_token.access_token);
@@ -58,7 +57,6 @@ async fn start() -> rocket::Rocket<Build> {
     let config = GlobalConfig {
         client_id,
         client_secret,
-        categories,
         tags,
         token,
         expired: Arc::new(Mutex::new(expiring_time)),

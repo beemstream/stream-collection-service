@@ -31,25 +31,3 @@ pub fn get_twitch_tag_ids() -> HashMap<Category, String> {
     );
     hash
 }
-
-// static
-pub fn get_twitch_categories() -> HashMap<String, Category> {
-    let mut hash: HashMap<String, Category> = HashMap::new();
-    hash.insert(
-        "a59f1e4e-257b-4bd0-90c7-189c3efbf917".to_owned(),
-        Category::Programming,
-    );
-    hash.insert(
-        "c23ce252-cf78-4b98-8c11-8769801aaf3a".to_owned(),
-        Category::WebDevelopment,
-    );
-    hash.insert(
-        "f588bd74-e496-4d11-9169-3597f38a5d25".to_owned(),
-        Category::GameDevelopment,
-    );
-    hash.insert(
-        "6e23d976-33ec-47e8-b22b-3727acd41862".to_owned(),
-        Category::MobileDevelopment,
-    );
-    hash
-}

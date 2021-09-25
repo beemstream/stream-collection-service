@@ -12,7 +12,6 @@ pub struct GlobalConfig {
     pub client_id: String,
     pub client_secret: String,
     pub tags: HashMap<Category, String>,
-    pub categories: HashMap<String, Category>,
     pub token: Arc<Mutex<Token>>,
     pub expired: Arc<Mutex<std::time::Instant>>,
     pub all_tags: HashMap<String, String>,
