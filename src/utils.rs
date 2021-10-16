@@ -7,8 +7,8 @@ use rocket::{
 };
 use serde::Serialize;
 
-use crate::clients::twitch::TwitchStream;
 use crate::category::Category;
+use crate::clients::twitch::TwitchStream;
 
 pub struct JsonResponse<T> {
     data: T,
@@ -33,10 +33,12 @@ impl<'r, T: Serialize> Responder<'r, 'static> for JsonResponse<T> {
     }
 }
 
+const TITLE_BLACKLIST: &'static [&'static str] = &["minecraft", "fortnite", "pokemon"];
+
 pub fn filter_by_category(
     streams: Vec<TwitchStream>,
     category_tag: &str,
-    all_tags: &HashMap<String, String>
+    all_tags: &HashMap<String, String>,
 ) -> Vec<TwitchStream> {
     streams
         .into_iter()
@@ -45,14 +47,25 @@ pub fn filter_by_category(
                 Some(tags) => tags.iter().any(|id| id.eq(category_tag)),
                 None => false,
             };
-            is_matched_tag
+
+            let is_blacklist = TITLE_BLACKLIST
+                .iter()
+                .any(|blacklist| stream.title.to_lowercase().contains(blacklist));
+
+            (stream.game_id == "1469308723" || is_matched_tag) && !is_blacklist
         })
         .map(|mut s| {
             s.tag_ids = {
                 if s.tag_ids.is_none() {
                     Some(vec!["programming".to_owned()])
                 } else {
-                    Some(s.tag_ids.unwrap().into_iter().map(|ids| all_tags.get(&ids).unwrap().to_owned()).collect())
+                    Some(
+                        s.tag_ids
+                            .unwrap()
+                            .into_iter()
+                            .map(|ids| all_tags.get(&ids).unwrap().to_owned())
+                            .collect(),
+                    )
                 }
             };
             s
@@ -63,7 +76,7 @@ pub fn filter_by_category(
 pub fn filter_all_programming_streams(
     streams: Vec<TwitchStream>,
     tag_ids: &HashMap<Category, String>,
-    all_tags: &HashMap<String, String>
+    all_tags: &HashMap<String, String>,
 ) -> Vec<TwitchStream> {
     let tag_id_vals: Vec<&String> = tag_ids.values().collect();
     streams
@@ -73,14 +86,24 @@ pub fn filter_all_programming_streams(
                 Some(tags) => tags.iter().any(|id| tag_id_vals.contains(&id)),
                 None => false,
             };
-            stream.game_id == "1469308723" || is_matched_tag
+            let is_blacklist = TITLE_BLACKLIST
+                .iter()
+                .any(|blacklist| stream.title.to_lowercase().contains(blacklist));
+
+            (stream.game_id == "1469308723" || is_matched_tag) && !is_blacklist
         })
         .map(|mut s| {
             s.tag_ids = {
                 if s.tag_ids.is_none() {
                     Some(vec!["programming".to_owned()])
                 } else {
-                    Some(s.tag_ids.unwrap().into_iter().map(|ids| all_tags.get(&ids).unwrap().to_owned()).collect())
+                    Some(
+                        s.tag_ids
+                            .unwrap()
+                            .into_iter()
+                            .map(|ids| all_tags.get(&ids).unwrap().to_owned())
+                            .collect(),
+                    )
                 }
             };
             s
