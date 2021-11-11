@@ -1,6 +1,6 @@
 [package]
 name = "stream-collection-service"
-version = "0.1.11"
+version = "0.1.12"
 authors = ["Ibrahim M <dev@beemstream.com>"]
 edition = "2018"
 

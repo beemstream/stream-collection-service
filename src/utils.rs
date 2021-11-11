@@ -52,7 +52,7 @@ pub fn filter_by_category(
                 .iter()
                 .any(|blacklist| stream.title.to_lowercase().contains(blacklist));
 
-            (stream.game_id == "1469308723" || is_matched_tag) && !is_blacklist
+            is_matched_tag && !is_blacklist
         })
         .map(|mut s| {
             s.tag_ids = {
