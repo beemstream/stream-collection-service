@@ -1,14 +1,14 @@
 use crate::{category::Category, clients::twitch::{Token, TwitchStream, TwitchStreamsResponse, get_science_and_tech_streams, get_software_game_dev_streams, get_token}, states::GlobalConfig, utils::{filter_all_programming_streams, filter_by_category, JsonResponse}};
-use futures::{future::BoxFuture, FutureExt};
+
 use once_cell::sync::Lazy;
 use rocket::{
     get,
     http::Status,
     info,
-    tokio::{join, time::Interval},
     State,
 };
-use std::{collections::HashMap, sync::Mutex};
+use std::sync::Mutex;
+use tokio::{join, time::Interval};
 
 pub static STREAMS_CACHE: Lazy<Mutex<Vec<TwitchStream>>> = Lazy::new(|| Mutex::new(vec![]));
 
@@ -69,14 +69,13 @@ pub async fn fetch_all_livestreams(
     all_streams
 }
 
-pub fn fetch_streams_interval(
+pub async fn fetch_streams_interval(
     mut interval: Interval,
     client_id: String,
     client_secret: String,
     token: Token,
-    tags: HashMap<Category, String>,
-) -> BoxFuture<'static, ()> {
-    async move {
+) -> () {
+    loop {
         interval.tick().await;
 
         let access_token =
@@ -108,10 +107,7 @@ pub fn fetch_streams_interval(
         data.sort_by(|a, b| b.viewer_count.cmp(&a.viewer_count));
 
         *STREAMS_CACHE.lock().unwrap() = data;
-
-        fetch_streams_interval(interval, client_id, client_secret, token, tags).await
     }
-    .boxed()
 }
 
 #[get("/streams?<category>")]

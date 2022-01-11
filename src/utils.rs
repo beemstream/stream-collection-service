@@ -33,7 +33,7 @@ impl<'r, T: Serialize> Responder<'r, 'static> for JsonResponse<T> {
     }
 }
 
-const TITLE_BLACKLIST: &'static [&'static str] = &["minecraft", "fortnite", "pokemon"];
+const TITLE_BLACKLIST: &[&str] = &["minecraft", "fortnite", "pokemon"];
 
 pub fn filter_by_category(
     streams: Vec<TwitchStream>,
@@ -101,6 +101,7 @@ pub fn filter_all_programming_streams(
                         s.tag_ids
                             .unwrap()
                             .into_iter()
+                            .filter(|ids| all_tags.get(ids).is_some())
                             .map(|ids| all_tags.get(&ids).unwrap().to_owned())
                             .collect(),
                     )

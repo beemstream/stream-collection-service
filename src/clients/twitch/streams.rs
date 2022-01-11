@@ -1,5 +1,5 @@
-use isahc::{AsyncReadResponseExt, Request};
-use rocket::info;
+use isahc::{AsyncReadResponseExt, Request, Response, AsyncBody};
+use rocket::{info, serde::json::serde_json::to_string};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
@@ -95,12 +95,15 @@ pub async fn fetch_programming_streams(
         })
         .unwrap();
 
-    let mut response = isahc::send_async(request)
-        .await
-        .map_err(|_| TwitchStreamsResponse {
+    let body = Response::builder()
+        .body(AsyncBody::from(to_string(&TwitchStreamsResponse {
             data: vec![],
             pagination: TwitchPagination { cursor: None },
-        })
+        }).unwrap()));
+
+    let mut response = isahc::send_async(request)
+        .await
+        .map_err(|_| body.unwrap())
         .unwrap();
 
     response

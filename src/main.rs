@@ -42,16 +42,15 @@ async fn start() -> rocket::Rocket<Build> {
     info!("token expiring at {:?}", expires_in);
 
     let stream_fetch_interval =
-        rocket::tokio::time::interval(rocket::tokio::time::Duration::from_millis(15_000));
+        tokio::time::interval(tokio::time::Duration::from_millis(15_000));
 
     let all_tags = get_all_tags_map(&client_id, &fetched_token.access_token).await;
 
-    rocket::tokio::spawn(fetch_streams_interval(
+    tokio::spawn(fetch_streams_interval(
         stream_fetch_interval,
         client_id.clone(),
         client_secret.clone(),
         fetched_token,
-        tags.clone(),
     ));
 
     let config = GlobalConfig {
