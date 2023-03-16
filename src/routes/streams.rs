@@ -6,9 +6,9 @@ use rocket::{
     http::Status,
     info,
     State,
+    tokio::{join, time::Interval}
 };
 use std::sync::Mutex;
-use tokio::{join, time::Interval};
 
 pub static STREAMS_CACHE: Lazy<Mutex<Vec<TwitchStream>>> = Lazy::new(|| Mutex::new(vec![]));
 

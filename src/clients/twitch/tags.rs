@@ -49,6 +49,8 @@ pub async fn get_all_tags(
     let mut response = isahc::send_async(request)
         .await.unwrap();
 
+    println!("{:?}", response.text().await);
+
     response.json().await.unwrap()
 }
 
@@ -87,6 +89,8 @@ pub async fn get_all_tags_map(
 
         cursor = tags_response.pagination.cursor;
     }
+
+    info!("ALL TAGS {:#?}", all_tags_map);
 
     all_tags_map
 }

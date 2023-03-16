@@ -1,4 +1,5 @@
 use rocket::{catchers, debug, info, launch, routes, Build, Rocket};
+use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
 use catchers::not_found;
@@ -42,11 +43,12 @@ async fn start() -> rocket::Rocket<Build> {
     info!("token expiring at {:?}", expires_in);
 
     let stream_fetch_interval =
-        tokio::time::interval(tokio::time::Duration::from_millis(15_000));
+        rocket::tokio::time::interval(rocket::tokio::time::Duration::from_millis(15_000));
 
-    let all_tags = get_all_tags_map(&client_id, &fetched_token.access_token).await;
+    // let all_tags = get_all_tags_map(&client_id, &fetched_token.access_token).await;
+    let all_tags = HashMap::new();
 
-    tokio::spawn(fetch_streams_interval(
+    rocket::tokio::spawn(fetch_streams_interval(
         stream_fetch_interval,
         client_id.clone(),
         client_secret.clone(),

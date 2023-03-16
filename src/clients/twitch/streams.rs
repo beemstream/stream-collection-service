@@ -49,6 +49,7 @@ pub async fn get_science_and_tech_streams(
 
     let streams = fetch_programming_streams(twitch_client_id, access_token, url).await;
 
+    info!("fetched first stream {:?}", streams.data.get(0));
     info!("fetched {} streams", streams.data.len());
 
     streams
@@ -73,6 +74,7 @@ pub async fn get_software_game_dev_streams(
 
     let streams = fetch_programming_streams(twitch_client_id, access_token, url).await;
 
+    info!("fetched first stream {:?}", streams.data.get(0));
     info!("fetched {} streams", streams.data.len());
 
     streams
